@@ -28,8 +28,11 @@ void Shell::LoadBytecode(const v8::FunctionCallbackInfo<v8::Value>& info) {
     auto source = isolateInternal->factory()
         ->NewStringFromUtf8(base::CStrVector("source"))
         .ToHandleChecked();
-    v8::internal::ScriptDetails script_details;
+
+    // V8 12.4: CodeSerializer::Deserialize nhan ScriptOriginOptions o tham so thu 4
+    // (V8 13.x doi thanh ScriptDetails). Dung default ScriptOriginOptions.
+    v8::ScriptOriginOptions origin_options;
 
     printf("===== START DESERIALIZE BYTECODE =====\n");
-    v8::internal::CodeSerializer::Deserialize(isolateInternal, &cached_data, source, script_details);
+    v8::internal::CodeSerializer::Deserialize(isolateInternal, &cached_data, source, origin_options);
 }
