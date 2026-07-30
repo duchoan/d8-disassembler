@@ -3,10 +3,14 @@ Import-Module (Join-Path $PSScriptRoot "..\utils.psm1")
 function Patch {
     param([string]$Content)
 
+    # V8 12.4: d8.cc khong include san script-details.h (khac V8 13.8), nen
+    # 'v8::internal::ScriptDetails script_details;' trong disassemble.cc bao
+    # "variable has incomplete type". Them include tuong minh.
     $Content = Add-LineBelow -Content $Content `
         -Patterns @('#include .+') `
         -Insert @"
 #include <cstring>
+#include "src/codegen/script-details.h"
 "@
 
     $Content = Edit-FunctionBody -Content $Content `
@@ -17,17 +21,19 @@ function Patch {
             -Insert @"
   global_template->Set(isolate, "loadBytecode",
                        FunctionTemplate::New(isolate, LoadBytecode));
-  global_template->Set(isolate, "dumpOpcodes",
-                       FunctionTemplate::New(isolate, DumpOpcodes));
 "@
         return $Body
     }
 
+    # CHI chen disassemble.cc (loadBytecode).
+    # KHONG chen metadata.cc (DumpOpcodes): no goi BYTECODE_LIST(V, V_TSA) - dang
+    # 2 tham so cua V8 13.x. V8 12.4 chi nhan 1 tham so, gay:
+    #   too many arguments provided to function-like macro invocation
+    #   unknown type name 'BYTECODE_LIST'
+    # dumpOpcodes khong can cho viec decompile .jsc, chi can loadBytecode.
+    # (3 file codegen/*, common/globals.h bao "Unchanged" cung thuoc phan nay.)
     $implements = Get-Content `
         -Path (Join-Path $PSScriptRoot "disassemble.cc") `
-        -Raw
-    $implements += Get-Content `
-        -Path (Join-Path $PSScriptRoot "metadata.cc") `
         -Raw
     $Content = Add-LineBelow -Content $Content `
         -Patterns @('void Shell::Print\(', '^}$') `
