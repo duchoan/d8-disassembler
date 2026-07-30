@@ -7,11 +7,16 @@ on:
         description: 'V8 Version / Branch'
         required: true
         default: '13.8.258.18'
+      electron_ref:
+        description: 'Electron tag de lay patch V8 (de trong = khong ap)'
+        required: false
+        default: 'v30.5.1'
 jobs:
   build:
     runs-on: windows-2022
     env:
       V8_BRANCH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.v8_branch || '13.8.258.18' }}
+      ELECTRON_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.electron_ref || '' }}
       DEPOT_TOOLS_WIN_TOOLCHAIN: 0
 
     steps:
@@ -48,6 +53,31 @@ jobs:
           name: v8-src-${{ env.V8_BRANCH }}
           path: target/v8/src
           compression-level: 9
+
+      - name: Apply Electron V8 patches
+        # language=PowerShell
+        if: ${{ env.ELECTRON_REF != '' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = "https://raw.githubusercontent.com/electron/electron/$env:ELECTRON_REF/patches/v8"
+          $raw = (Invoke-WebRequest -UseBasicParsing "$base/.patches").Content
+          $list = $raw -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }
+          Write-Host "So patch Electron: $($list.Count)"
+          Set-Location target/v8
+          $applied = 0
+          foreach ($p in $list) {
+            $tmp = Join-Path $env:RUNNER_TEMP $p
+            Invoke-WebRequest -UseBasicParsing "$base/$p" -OutFile $tmp
+            Write-Host "== $p"
+            git apply --ignore-whitespace --whitespace=nowarn $tmp
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "  git apply thuong that bai -> thu --3way"
+              git apply --3way --ignore-whitespace --whitespace=nowarn $tmp
+              if ($LASTEXITCODE -ne 0) { throw "Patch Electron that bai: $p" }
+            }
+            $applied++
+          }
+          Write-Host "Da ap $applied/$($list.Count) patch Electron thanh cong"
 
       - name: Patch V8
         # language=PowerShell
