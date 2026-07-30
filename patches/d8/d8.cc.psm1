@@ -3,14 +3,10 @@ Import-Module (Join-Path $PSScriptRoot "..\utils.psm1")
 function Patch {
     param([string]$Content)
 
-    # V8 12.4: d8.cc khong include san script-details.h (khac V8 13.8), nen
-    # 'v8::internal::ScriptDetails script_details;' trong disassemble.cc bao
-    # "variable has incomplete type". Them include tuong minh.
     $Content = Add-LineBelow -Content $Content `
         -Patterns @('#include .+') `
         -Insert @"
 #include <cstring>
-#include "src/codegen/script-details.h"
 "@
 
     $Content = Edit-FunctionBody -Content $Content `
