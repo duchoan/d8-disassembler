@@ -63,7 +63,7 @@ function Patch {
             -Insert @"
   if (map(cage_base)->instance_type() == ASM_WASM_DATA_TYPE) {
     os << "<ArrayBoilerplateDescription> ";
-    Cast<ArrayBoilerplateDescription>(*this)
+    ArrayBoilerplateDescription::cast(*this)
         ->constant_elements()
         .GetHeapObject()
         ->HeapObjectShortPrint(os);
@@ -74,14 +74,14 @@ function Patch {
             -Patterns @('case FIXED_ARRAY_TYPE:', ';') `
             -Insert @"
       os << "\nStart FixedArray\n";
-      Cast<FixedArray>(*this)->FixedArrayPrint(os);
+      FixedArray::cast(*this)->FixedArrayPrint(os);
       os << "\nEnd FixedArray\n";
 "@
         $Body = Add-LineBelow -Content $Body `
             -Patterns @('case OBJECT_BOILERPLATE_DESCRIPTION_TYPE:', ';') `
             -Insert @"
       os << "\nStart ObjectBoilerplateDescription\n";
-      Cast<ObjectBoilerplateDescription>(*this)
+      ObjectBoilerplateDescription::cast(*this)
           ->ObjectBoilerplateDescriptionPrint(os);
       os << "\nEnd ObjectBoilerplateDescription\n";
 "@
@@ -89,7 +89,7 @@ function Patch {
             -Patterns @('case FIXED_DOUBLE_ARRAY_TYPE:', ';') `
             -Insert @"
       os << "\nStart FixedDoubleArray\n";
-      Cast<FixedDoubleArray>(*this)->FixedDoubleArrayPrint(os);
+      FixedDoubleArray::cast(*this)->FixedDoubleArrayPrint(os);
       os << "\nEnd FixedDoubleArray\n";
 "@
         $Body = Add-LineBelow -Content $Body `
